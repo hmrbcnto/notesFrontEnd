@@ -17,13 +17,26 @@ const App = () => {
   const [user, setUser] = useState(null)
 
   //function for getting notes
-  const hook = () => {
+  const notesHook = () => {
     noteService.getAll()
       .then(initialData => setNotes(initialData))
   }
 
+  //function for checking if a user is already logged in from local storage
+  const userHook = () => {
+    const loggedUserJSON = window.localStorage.getItem('loggedNoteappUser')
+    if (loggedUserJSON){
+      const user = JSON.parse(loggedUserJSON)
+      setUser(user)
+      noteService.setToken(user.token)
+    }
+  }
+
   //effect for getting notes and saving to state
-  useEffect(hook, [])
+  useEffect(notesHook, [])
+
+  //effect for setting state to current user found from local storage
+  useEffect(userHook, [])
 
   //array of notes to show on screen
   const notesToShow = showAll ? notes : notes.filter(note => note.important)
@@ -49,11 +62,19 @@ const App = () => {
   const handleLogin = async (event) => {
     event.preventDefault()
     console.log('button')
+
     try {
       const user = await loginService.login({
         username, password
       })
+
       setUser(user)
+      
+      window.localStorage.setItem(
+        'loggedNoteappUser', JSON.stringify(user)
+      )
+
+      noteService.setToken(user.token)
       setUsername('')
       setPassword('')
     } catch (exception) {
@@ -125,6 +146,11 @@ const noteForm = () => (
   </form>
 )
 
+const logoutUser = () => {
+  window.localStorage.removeItem('loggedNoteappUser')
+  setUser(null)
+}
+
   //handling changes to the showAll state
   const handleShowAllChange = (event) => {
     setShowAll(!showAll)
@@ -137,7 +163,9 @@ const noteForm = () => (
       {user === null ?
                 loginForm() :
                 <div>
-                  <p> {user.name} logged in</p>
+                  <p> {user.name} logged in 
+                      <button onClick={logoutUser}>Logout </button>
+                  </p>
                   {noteForm()}
                 </div>}
       
